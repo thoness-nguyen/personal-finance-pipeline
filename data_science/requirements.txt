@@ -5,5 +5,5 @@ matplotlib==3.8.4
 seaborn==0.13.2
 jupyter==1.0.0
 sqlalchemy==2.0.29
-pymysql==1.1.0
+pymysql==1.1.1
 python-dotenv==1.0.1
