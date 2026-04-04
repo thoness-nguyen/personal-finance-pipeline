@@ -1,0 +1,75 @@
+# =============================================================================
+# File: .github/workflows/deploy_streamlit.yml
+# Purpose: GitHub Actions workflow that deploys the Streamlit dashboard on
+#          every push to the main branch. Deployment target is a stub –
+#          configure the target platform (Cloud Run, App Engine, Streamlit
+#          Community Cloud, etc.) in the TODO section below.
+# =============================================================================
+
+name: Deploy Streamlit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "visualization/streamlit_app/**"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Deploy Streamlit App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: visualization/streamlit_app
+        run: pip install -r requirements.txt
+
+      # TODO: Choose and configure a deployment target. Options:
+      #
+      # Option A – Google Cloud Run:
+      # - name: Authenticate to GCP
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
+      # - name: Build and push Docker image
+      #   run: |
+      #     gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT }}/streamlit-app \
+      #       visualization/streamlit_app/
+      # - name: Deploy to Cloud Run
+      #   run: |
+      #     gcloud run deploy streamlit-app \
+      #       --image gcr.io/${{ secrets.GCP_PROJECT }}/streamlit-app \
+      #       --platform managed --region us-central1 --allow-unauthenticated
+      #
+      # Option B – Streamlit Community Cloud:
+      #   Push to main branch automatically triggers Streamlit Community Cloud
+      #   deployment if the app is linked. No additional steps needed.
+      #
+      # Option C – Docker Compose on a VM:
+      # - name: SSH deploy
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
+      #     script: |
+      #       cd /opt/personal-finance-pipeline
+      #       git pull
+      #       docker compose up -d --build streamlit
+
+      - name: Deployment stub
+        run: |
+          echo "TODO: Configure deployment target in .github/workflows/deploy_streamlit.yml"
+          echo "Streamlit app is located at visualization/streamlit_app/"

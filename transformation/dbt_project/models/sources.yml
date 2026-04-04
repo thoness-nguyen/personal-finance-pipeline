@@ -1,0 +1,23 @@
+# models/sources.yml
+# =============================================================================
+# File: transformation/dbt_project/models/sources.yml
+# Purpose: Declares the raw MySQL tables in finance_db as dbt sources so that
+#          staging models can reference them via source() macro.
+# =============================================================================
+
+version: 2
+
+sources:
+  - name: finance_db
+    description: "Raw tables in the finance MySQL database"
+    database: finance_db
+    schema: finance_db
+    tables:
+      - name: expenses
+        description: "Fact table containing individual expense records"
+      - name: categories
+        description: "Lookup table for expense categories"
+      - name: merchants
+        description: "Lookup table for merchants"
+      - name: time_dim
+        description: "Date dimension table"
