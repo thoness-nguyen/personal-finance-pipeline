@@ -1,0 +1,75 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────
+# Personal Finance Pipeline – Docker Compose
+# Orchestrates all services: python-api, nodejs-fallback, mysql, streamlit
+# Fill in .env (copy from .env.example) before running
+# ─────────────────────────────────────────────────────────────────
+
+networks:
+  finance-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+
+services:
+
+  # ── PRIMARY INGESTION ─────────────────────────────────────────
+  python-api:
+    build:
+      context: ./ingestion/python_api
+      dockerfile: Dockerfile
+    ports:
+      - "${PYTHON_API_PORT:-8000}:8000"
+    env_file: .env
+    networks:
+      - finance-network
+    volumes:
+      - ./credentials:/app/credentials:ro
+    # TODO: add healthcheck once FastAPI app is implemented
+
+  # ── FALLBACK INGESTION ────────────────────────────────────────
+  nodejs-fallback:
+    build:
+      context: ./ingestion/nodejs_fallback
+      dockerfile: Dockerfile
+    ports:
+      - "${NODE_API_PORT:-3000}:3000"
+    env_file: .env
+    networks:
+      - finance-network
+    volumes:
+      - ./credentials:/app/credentials:ro
+    # TODO: add healthcheck once Express app is implemented
+
+  # ── DATABASE ──────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - finance-network
+
+  # ── VISUALIZATION ─────────────────────────────────────────────
+  streamlit:
+    build:
+      context: ./visualization/streamlit_app
+      dockerfile: Dockerfile
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    env_file: .env
+    networks:
+      - finance-network
+    depends_on:
+      - mysql
+    # TODO: add healthcheck once Streamlit app is implemented
