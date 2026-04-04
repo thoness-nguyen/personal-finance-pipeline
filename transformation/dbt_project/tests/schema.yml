@@ -1,0 +1,46 @@
+# tests/schema.yml
+# =============================================================================
+# File: transformation/dbt_project/tests/schema.yml
+# Purpose: dbt generic tests (not_null, unique) applied to key columns in
+#          staging and mart models to ensure data quality.
+# =============================================================================
+
+version: 2
+
+models:
+  - name: stg_expenses
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique
+      - name: expense_date
+        tests:
+          - not_null
+      - name: amount
+        tests:
+          - not_null
+      - name: category_id
+        tests:
+          - not_null
+
+  - name: mart_monthly_summary
+    columns:
+      - name: placeholder
+        tests:
+          - not_null
+        # TODO: Replace placeholder with real columns and add meaningful tests
+
+  - name: mart_category_breakdown
+    columns:
+      - name: placeholder
+        tests:
+          - not_null
+        # TODO: Replace placeholder with real columns and add meaningful tests
+
+  - name: mart_top_merchants
+    columns:
+      - name: placeholder
+        tests:
+          - not_null
+        # TODO: Replace placeholder with real columns and add meaningful tests

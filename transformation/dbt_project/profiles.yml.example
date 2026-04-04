@@ -1,0 +1,20 @@
+# profiles.yml.example
+# =============================================================================
+# File: transformation/dbt_project/profiles.yml.example
+# Purpose: Example dbt connection profile for connecting to the MySQL
+#          finance_db database. Copy this file to ~/.dbt/profiles.yml and
+#          populate via environment variables (see .env.example).
+#          DO NOT commit real credentials.
+# =============================================================================
+
+finance_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: mysql
+      server: "{{ env_var('MYSQL_HOST') }}"
+      port: 3306
+      database: "{{ env_var('MYSQL_DATABASE') }}"
+      username: "{{ env_var('MYSQL_USER') }}"
+      password: "{{ env_var('MYSQL_PASSWORD') }}"
+      schema: finance_db

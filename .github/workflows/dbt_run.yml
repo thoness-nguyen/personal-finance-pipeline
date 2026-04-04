@@ -1,0 +1,71 @@
+# =============================================================================
+# File: .github/workflows/dbt_run.yml
+# Purpose: GitHub Actions workflow that runs dbt build and dbt test after the
+#          ETL pipeline completes. Triggered by workflow_run completion of
+#          the etl_pipeline workflow.
+# =============================================================================
+
+name: dbt Build & Test
+
+on:
+  workflow_run:
+    workflows: ["ETL Pipeline"]
+    types:
+      - completed
+  workflow_dispatch: {}
+
+jobs:
+  dbt-build:
+    name: dbt Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt-mysql
+        run: |
+          pip install dbt-mysql
+
+      - name: Write dbt profiles.yml
+        env:
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          mkdir -p ~/.dbt
+          # TODO: Replace this heredoc with a secure profiles.yml generation script
+          cat > ~/.dbt/profiles.yml << EOF
+          finance_pipeline:
+            target: dev
+            outputs:
+              dev:
+                type: mysql
+                server: "$MYSQL_HOST"
+                port: 3306
+                database: "$MYSQL_DATABASE"
+                username: "$MYSQL_USER"
+                password: "$MYSQL_PASSWORD"
+                schema: finance_db
+          EOF
+
+      - name: Install dbt packages
+        working-directory: transformation/dbt_project
+        run: dbt deps
+
+      - name: Run dbt build
+        working-directory: transformation/dbt_project
+        run: dbt build
+
+      - name: Run dbt tests
+        working-directory: transformation/dbt_project
+        run: dbt test
