@@ -39,17 +39,17 @@ Built as a learning project covering **Data Engineering → DevOps → Data Scie
 
 ## 🛠️ Tech Stack
 
-| Layer | Tool |
-|---|---|
-| Ingestion (primary) | Python FastAPI |
-| Ingestion (fallback) | Node.js Express |
-| Data Lake | Google Cloud Storage (GCS) |
-| Database | MySQL 8.0 |
-| Transformation | dbt |
-| Visualization | Streamlit → Power BI → Looker Studio |
-| Orchestration | GitHub Actions |
-| Containerization | Docker + Docker Compose |
-| Data Science | pandas, scikit-learn, Prophet |
+| Layer                | Tool                                 |
+| -------------------- | ------------------------------------ |
+| Ingestion (primary)  | Python FastAPI                       |
+| Ingestion (fallback) | Node.js Express                      |
+| Data Lake            | Google Cloud Storage (GCS)           |
+| Database             | MySQL 8.0                            |
+| Transformation       | dbt                                  |
+| Visualization        | Streamlit → Power BI → Looker Studio |
+| Orchestration        | GitHub Actions                       |
+| Containerization     | Docker + Docker Compose              |
+| Data Science         | pandas, scikit-learn, Prophet        |
 
 ---
 
@@ -85,31 +85,34 @@ personal-finance-pipeline/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - Google Cloud account + GCS bucket
 - MySQL (via Docker or Cloud SQL)
 
 ### Setup
+
 1. Clone the repo
 2. Copy `.env.example` → `.env` and fill in your values
-3. Place your GCP service account key at `credentials/gcp-key.json`
+3. Place your GCP service account key at `credentials/<project>-<service>-<purpose>-<env>.json`
 4. Run `docker-compose up --build`
 
 ---
 
 ## 📋 Project Phases
 
-| Phase | Description | Status |
-|---|---|---|
-| Phase 1 | Ingestion (FastAPI + Node.js fallback) | 🔲 To Do |
-| Phase 1B | Data Cleaning & MySQL Load | 🔲 To Do |
-| Phase 2 | dbt Transformations | 🔲 To Do |
-| Phase 3 | Streamlit Visualization | 🔲 To Do |
-| Phase 4 | DevOps – Docker + GitHub Actions | 🔲 To Do |
-| Phase 5 | Data Science – Forecasting & ML | 🔲 To Do |
+| Phase    | Description                            | Status   |
+| -------- | -------------------------------------- | -------- |
+| Phase 1  | Ingestion (FastAPI + Node.js fallback) | 🔲 To Do |
+| Phase 1B | Data Cleaning & MySQL Load             | 🔲 To Do |
+| Phase 2  | dbt Transformations                    | 🔲 To Do |
+| Phase 3  | Streamlit Visualization                | 🔲 To Do |
+| Phase 4  | DevOps – Docker + GitHub Actions       | 🔲 To Do |
+| Phase 5  | Data Science – Forecasting & ML        | 🔲 To Do |
 
 ---
 
 ## 🔒 Security Notes
+
 - Never commit `.env` or `credentials/` to Git (both are in `.gitignore`)
 - Use GitHub Secrets for CI/CD environment variables

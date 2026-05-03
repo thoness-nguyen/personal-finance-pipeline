@@ -8,3 +8,5 @@ sqlalchemy==2.0.29
 pymysql==1.1.1
 python-dotenv==1.0.1
 httpx==0.27.0
+google-auth==2.49.2
+gspread==6.1.2
