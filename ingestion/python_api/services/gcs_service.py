@@ -1,13 +1,22 @@
 # =============================================================================
-# File: services/gcs_service.py
 # Purpose: Provides helper functions for uploading and downloading files from
 #          Google Cloud Storage (GCS) using the google-cloud-storage SDK.
 #          Bucket name and credentials are read from environment variables.
 # =============================================================================
 
 import os
+from google.cloud import storage
+from dotenv import load_dotenv
 
-# TODO: from google.cloud import storage
+load_dotenv()
+
+
+def _get_bucket():
+    bucket_name = os.getenv("GCS_BUCKET_NAME")
+    if not bucket_name:
+        raise ValueError("GCS_BUCKET_NAME environment variable is not set.")
+    client = storage.Client()
+    return client.bucket(bucket_name)
 
 
 def upload_to_gcs(file_bytes: bytes, destination_blob_name: str) -> str:
@@ -19,15 +28,21 @@ def upload_to_gcs(file_bytes: bytes, destination_blob_name: str) -> str:
         destination_blob_name: Target path/name inside the GCS bucket.
 
     Returns:
-        Public or signed URL of the uploaded object.
-
-    TODO: Instantiate google.cloud.storage.Client().
-    TODO: Get bucket from env var GCS_BUCKET_NAME.
-    TODO: Upload file_bytes to the specified blob.
-    TODO: Return the gs:// URI or a signed URL.
+        gs:// URI of the uploaded object.
     """
-    # TODO: Implement GCS upload
-    raise NotImplementedError("upload_to_gcs is not yet implemented")
+    if not file_bytes:
+        raise ValueError("file_bytes cannot be empty.")
+
+    if not destination_blob_name:
+        raise ValueError("destination_blob_name is required.")
+
+    bucket = _get_bucket()
+    blob = bucket.blob(destination_blob_name)
+
+    # Upload from memory
+    blob.upload_from_string(file_bytes)
+
+    return f"gs://{bucket.name}/{destination_blob_name}"
 
 
 def download_from_gcs(source_blob_name: str) -> bytes:
@@ -39,10 +54,14 @@ def download_from_gcs(source_blob_name: str) -> bytes:
 
     Returns:
         Raw bytes of the downloaded file.
-
-    TODO: Instantiate google.cloud.storage.Client().
-    TODO: Get bucket from env var GCS_BUCKET_NAME.
-    TODO: Download and return blob bytes.
     """
-    # TODO: Implement GCS download
-    raise NotImplementedError("download_from_gcs is not yet implemented")
+    if not source_blob_name:
+        raise ValueError("source_blob_name is required.")
+
+    bucket = _get_bucket()
+    blob = bucket.blob(source_blob_name)
+
+    if not blob.exists():
+        raise FileNotFoundError(f"Blob '{source_blob_name}' does not exist.")
+
+    return blob.download_as_bytes()
