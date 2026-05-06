@@ -1,5 +1,4 @@
 # =============================================================================
-# File: services/gcs_service.py
 # Purpose: Provides helper functions for uploading and downloading files from
 #          Google Cloud Storage (GCS) using the google-cloud-storage SDK.
 #          Bucket name and credentials are read from environment variables.

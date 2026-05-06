@@ -95,7 +95,12 @@ personal-finance-pipeline/
 1. Clone the repo
 2. Copy `.env.example` → `.env` and fill in your values
 3. Place your GCP service account key at `credentials/<project>-<service>-<purpose>-<env>.json`
-4. Run `docker-compose up --build`
+4. Run Docker Compose to start all services:
+   - Run full:`docker-compose up --build`
+   - Run individual service: `docker-compose up -d --build <service_name>`
+5. Access services:
+   - FastAPI: `http://localhost:8000/docs`
+   - Streamlit: `http://localhost:8501`
 
 ---
 

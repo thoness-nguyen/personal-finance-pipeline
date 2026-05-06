@@ -1,16 +1,14 @@
 """
 Personal Finance Pipeline – Python FastAPI Ingestion Service
-Primary ingestion endpoint: accepts CSV/Excel uploads, cleans data, stores to GCS.
 
-TODO:
-- Implement POST /ingest endpoint in routers/ingest.py
-- Implement GCS upload/download in services/gcs_service.py
-- Implement pandas cleaning logic in services/cleaner.py
+ETL Flow:
+1. User uploads CSV/Excel file via POST /ingest
+2. File is read into a DataFrame, cleaned (normalized headers, parse dates, handle missing values)
+3. Cleaned DataFrame is converted back to CSV bytes and uploaded to GCS
 """
 
 from fastapi import FastAPI
-# TODO: Uncomment once router is implemented
-# from routers.ingest import router as ingest_router
+from routers.ingest import router as ingest_router
 
 app = FastAPI(
     title="Finance Ingestion API",
@@ -20,9 +18,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# TODO: Include ingest router once implemented
-# app.include_router(ingest_router, prefix="/api/v1")
-
+app.include_router(ingest_router, prefix="/api/v1")
 
 @app.get("/health")
 def health_check():
