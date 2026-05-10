@@ -100,6 +100,7 @@ personal-finance-pipeline/
    - Run individual service: `docker-compose up -d --build <service_name>`
 5. Access services:
    - FastAPI: `http://localhost:8000/docs`
+   - Node.js Express: `http://localhost:3000/api/ingest`
    - Streamlit: `http://localhost:8501`
 
 ---
