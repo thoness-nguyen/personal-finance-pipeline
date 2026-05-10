@@ -37,6 +37,9 @@ services:
     ports:
       - "${NODE_API_PORT:-3000}:3000"
     env_file: .env
+    environment:
+      GOOGLE_SHEETS_CREDENTIALS_LOCAL: ""
+      GOOGLE_APPLICATION_CREDENTIALS_LOCAL: ""
     networks:
       - finance-network
     volumes:

@@ -24,10 +24,6 @@ def clean_expenses(df: pd.DataFrame):
         .str.replace(r"\s+", "_", regex=True)
     )
     
-    print("DEBUG columns:", df.columns.tolist())
-    print("DEBUG dataframe preview:")
-    print(df.head())
-    
     # Parse and validate date
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     
