@@ -4,7 +4,9 @@
 #          Bucket name and credentials are read from environment variables.
 # =============================================================================
 
+from io import BytesIO
 import os
+import pandas as pd
 from google.cloud import storage
 from dotenv import load_dotenv
 
@@ -18,6 +20,32 @@ def _get_bucket():
     client = storage.Client()
     return client.bucket(bucket_name)
 
+_DEDUP_KEY_COLS = ["date", "category", "sub_category", "type_payment", "balance"]
+
+def append_to_gcs(new_df: pd.DataFrame, blob_name: str) -> str:
+    """Download existing CSV, append new rows, deduplicate by key columns, re-upload."""
+    # Normalize column names on incoming data
+    new_df = new_df.copy()
+    new_df.columns = new_df.columns.str.strip().str.lower()
+
+    try:
+        existing_bytes = download_from_gcs(blob_name)
+        existing_df = pd.read_csv(BytesIO(existing_bytes), encoding="utf-8-sig")
+        # Normalize existing columns so merge aligns correctly
+        existing_df.columns = existing_df.columns.str.strip().str.lower()
+        merged_df = pd.concat([existing_df, new_df], ignore_index=True)
+    except FileNotFoundError:
+        merged_df = new_df  # first run, no existing file
+
+    # Deduplicate on key columns; fall back to all columns if keys are absent
+    key_cols = [c for c in _DEDUP_KEY_COLS if c in merged_df.columns]
+    if key_cols:
+        merged_df = merged_df.drop_duplicates(subset=key_cols, keep="last")
+    else:
+        merged_df = merged_df.drop_duplicates()
+
+    file_bytes = merged_df.to_csv(index=False).encode("utf-8-sig")
+    return upload_to_gcs(file_bytes, blob_name)
 
 def upload_to_gcs(file_bytes: bytes, destination_blob_name: str) -> str:
     """
@@ -40,7 +68,7 @@ def upload_to_gcs(file_bytes: bytes, destination_blob_name: str) -> str:
     blob = bucket.blob(destination_blob_name)
 
     # Upload from memory
-    blob.upload_from_string(file_bytes)
+    blob.upload_from_string(file_bytes, content_type="text/csv")
 
     return f"gs://{bucket.name}/{destination_blob_name}"
 

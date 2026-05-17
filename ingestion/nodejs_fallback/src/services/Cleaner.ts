@@ -25,10 +25,11 @@ export function cleanExpense(data: string) {
     ];
 
     results.data = results.data.flatMap((row) => {
-        const parsedDate = new Date(row.date);
+        const trimmedDate = row.date?.trim() ?? "";
+        const parsedDate = new Date(trimmedDate);
         const amountFields = ["amount", "balance"]
 
-        if (!row.date || isNaN(parsedDate.getTime())) {
+        if (!trimmedDate || isNaN(parsedDate.getTime())) {
             return [];
         }
 
@@ -49,8 +50,8 @@ export function cleanExpense(data: string) {
 
         return [{
             ...row,
-            date: parsedDate.toLocaleDateString("en-US"),
-            source_api: "nodejs",
+            date: parsedDate.toISOString().split("T")[0],
+            source_data: "nodejs",
         }]
     })
     return { headers: results.meta.fields, data: results.data };

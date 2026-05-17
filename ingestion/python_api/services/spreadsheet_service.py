@@ -25,8 +25,13 @@ def fetch_sheet_data(sheet_id: str, worksheet_name: str, credentials_path: str) 
     client = get_gspread_client(credentials_path)
     worksheet = client.open_by_key(sheet_id).worksheet(worksheet_name)
     rows = worksheet.get_all_values()
-    
-    return pd.DataFrame(rows)
+
+    if not rows:
+        return pd.DataFrame()
+
+    # Use first row as column headers (matches Node.js behaviour)
+    header, *data = rows
+    return pd.DataFrame(data, columns=header)
 
 def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
     """

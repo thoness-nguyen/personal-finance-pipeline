@@ -11,7 +11,7 @@ import pandas as pd
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.cleaner import clean_expenses
-from services.gcs_service import upload_to_gcs, download_from_gcs
+from services.gcs_service import upload_to_gcs, download_from_gcs, append_to_gcs
 from services.spreadsheet_service import fetch_sheet_data, dataframe_to_csv_bytes
 
 router = APIRouter()
@@ -56,10 +56,10 @@ def push_processed_data_to_gcs(source_blob: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     destination_blob_name = (
-        f"processed/expenses_cleaned_old_version.csv"
+        f"processed/expenses_cleaned.csv"
     )
     
-    # Upload to GCS
+    # Overwrite processed CSV (mirrors Node.js behaviour)
     gcs_uri = upload_to_gcs(file_bytes=file_bytes, destination_blob_name=destination_blob_name)
     
     return {
@@ -82,11 +82,11 @@ def push_raw_data_to_gcs():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     destination_blob_name = (
-        f"raw/expenses_raw_old_version.csv"
+        f"raw/expenses_raw.csv"
     )
     
-    # Upload to GCS
-    gcs_uri = upload_to_gcs(file_bytes=file_bytes, destination_blob_name=destination_blob_name)
+    # Append+deduplicate raw CSV before any cleaning (mirrors Node.js behaviour)
+    gcs_uri = append_to_gcs(new_df=raw_df, blob_name=destination_blob_name)
     
     return {
         "status": "success",

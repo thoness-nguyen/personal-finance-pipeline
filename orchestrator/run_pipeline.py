@@ -8,65 +8,62 @@
 
 import argparse
 import sys
-
-# TODO: import httpx
-# TODO: from dotenv import load_dotenv
-# TODO: import os
-
-
-def run_python_api(file_path: str) -> dict:
-    """
-    POST the file at file_path to the Python API /api/v1/ingest endpoint.
-
-    TODO: Read PYTHON_API_URL from environment (default http://localhost:8000).
-    TODO: Open file and POST as multipart form data using httpx.
-    TODO: Raise on non-200 status.
-    TODO: Return parsed JSON response.
-    """
-    # TODO: Implement Python API call
-    raise NotImplementedError("run_python_api is not yet implemented")
+import httpx
+from dotenv import load_dotenv
+from datetime import datetime
+import os
 
 
-def run_nodejs_fallback(file_path: str) -> dict:
-    """
-    POST the file at file_path to the Node.js fallback /api/v1/ingest endpoint.
+def run_python_api() -> dict:
+    """POST to the Python FastAPI /api/v1/ingest endpoint."""
+    url = os.getenv("PYTHON_API_URL", "http://localhost:8000")
+    response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
+    response.raise_for_status()
+    return response.json()
 
-    TODO: Read NODEJS_API_URL from environment (default http://localhost:3000).
-    TODO: Open file and POST as multipart form data using httpx.
-    TODO: Raise on non-200 status.
-    TODO: Return parsed JSON response.
-    """
-    # TODO: Implement Node.js fallback call
-    raise NotImplementedError("run_nodejs_fallback is not yet implemented")
+
+def run_nodejs_fallback() -> dict:
+    """POST to the Node.js fallback /api/v1/ingest endpoint."""
+    url = os.getenv("NODEJS_API_URL", "http://localhost:3000")
+    response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
+    response.raise_for_status()
+    return response.json()
 
 
 def main():
-    """
-    CLI entry point.
+    load_dotenv()
 
-    TODO: load_dotenv() to populate environment variables.
-    TODO: Parse --file (required) and --service (optional: python|nodejs|auto) args.
-    TODO: If service == 'python' or service == 'auto': call run_python_api().
-    TODO: On failure when service == 'auto': log warning and call run_nodejs_fallback().
-    TODO: Print result summary to stdout.
-    TODO: Exit with code 0 on success, 1 on failure.
-    """
     parser = argparse.ArgumentParser(
         description="Personal Finance Pipeline Orchestrator"
     )
-    parser.add_argument("--file", required=True, help="Path to the expense file")
     parser.add_argument(
         "--service",
         choices=["python", "nodejs", "auto"],
         default="auto",
-        help="Which ingestion service to use (default: auto)",
+        help="Which ingestion service to use (default: auto — even day=python, odd day=nodejs)",
     )
-
-    # TODO: Parse args and implement orchestration logic
     args = parser.parse_args()
-    print(f"[orchestrator] file={args.file} service={args.service}")
-    print("[orchestrator] TODO: implement orchestration logic")
-    sys.exit(0)
+
+    # Resolve effective service for 'auto' using even/odd day-of-month
+    if args.service == "auto":
+        day = datetime.now().day
+        effective_service = "python" if day % 2 == 0 else "nodejs"
+        print(f"[orchestrator] auto mode — day={day}, selected service={effective_service}")
+    else:
+        effective_service = args.service
+        print(f"[orchestrator] forced service={effective_service}")
+
+    try:
+        if effective_service == "python":
+            result = run_python_api()
+        else:
+            result = run_nodejs_fallback()
+
+        print(f"[orchestrator] success: {result}")
+        sys.exit(0)
+    except Exception as exc:
+        print(f"[orchestrator] error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
