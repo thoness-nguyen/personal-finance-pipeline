@@ -51,7 +51,7 @@ async function pushRawToGCS(sheetId: string, worksheetName: string) {
     const csvString = await parseCsvFromObject(records);
 
     // 4. Append new rows to existing raw CSV in GCS (creates if not exists, deduplicates if exists)
-    const destinationBlob = `raw/expenses_raw_ver_old.csv`;
+    const destinationBlob = `raw/expenses_raw.csv`;
     await appendCsvToGCS(csvString, destinationBlob);
 
     return { records, destinationBlob };
@@ -69,5 +69,5 @@ async function pushProcessedToGCS(destinationBlob: string) {
   const cleanedCsv = await parseCsvFromObject(cleanedData.data);
 
   // 4. Upload processed CSV
-  await uploadCsvToGCS(cleanedCsv, destinationBlob.replace("raw/", "processed/").replace("expenses_raw_ver_old.csv", "expenses_cleaned_ver_old.csv"));
+  await uploadCsvToGCS(cleanedCsv, destinationBlob.replace("raw/", "processed/").replace("expenses_raw.csv", "expenses_cleaned.csv"));
 }

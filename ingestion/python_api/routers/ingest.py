@@ -56,7 +56,7 @@ def push_processed_data_to_gcs(source_blob: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     destination_blob_name = (
-        f"processed/expenses_cleaned_ver_old.csv"
+        f"processed/expenses_cleaned.csv"
     )
     
     # Overwrite processed CSV (mirrors Node.js behaviour)
@@ -82,7 +82,7 @@ def push_raw_data_to_gcs():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     destination_blob_name = (
-        f"raw/expenses_raw_ver_old.csv"
+        f"raw/expenses_raw.csv"
     )
     
     # Append+deduplicate raw CSV before any cleaning (mirrors Node.js behaviour)
