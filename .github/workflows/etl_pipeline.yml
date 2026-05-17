@@ -43,5 +43,5 @@ jobs:
           NODEJS_API_URL: ${{ secrets.NODEJS_API_URL }}
           GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
         run: |
-          python personal-finance-pipeline/orchestrator/run_pipeline.py \
+          python orchestrator/run_pipeline.py \
             --service "${{ github.event.inputs.service || 'auto' }}"
