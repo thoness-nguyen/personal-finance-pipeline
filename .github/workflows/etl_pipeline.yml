@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: personal-finance-pipeline
 
     steps:
       - name: Checkout repository
