@@ -12,10 +12,6 @@ on:
     - cron: "0 2 * * *"   # Daily at 2 AM UTC
   workflow_dispatch:
     inputs:
-      file_path:
-        description: "Path to the expense file to ingest"
-        required: false
-        default: ""
       service:
         description: "Ingestion service to use (python | nodejs | auto)"
         required: false
@@ -41,17 +37,11 @@ jobs:
         run: |
           pip install httpx python-dotenv
 
-      # TODO: Add step to download/locate the expense file from GCS or a repository path
-      # - name: Download expense file
-      #   run: ...
-
       - name: Run pipeline orchestrator
         env:
           PYTHON_API_URL: ${{ secrets.PYTHON_API_URL }}
           NODEJS_API_URL: ${{ secrets.NODEJS_API_URL }}
           GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
         run: |
-          # TODO: Replace placeholder file path with actual file source
-          python orchestrator/run_pipeline.py \
-            --file "${{ github.event.inputs.file_path || 'TODO: set default file path' }}" \
+          python personal-finance-pipeline/orchestrator/run_pipeline.py \
             --service "${{ github.event.inputs.service || 'auto' }}"
