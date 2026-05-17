@@ -5,13 +5,14 @@
 # =============================================================================
 
 import pandas as pd
+import numpy as np
 
 def clean_expenses(df: pd.DataFrame):
     if df is None or df.empty:
         raise ValueError("Input DataFrame is empty or None.")
     
     # Set headers:
-    if all(str(col).isdigit() for col in df.columns):
+    if all(isinstance(col, (int, float)) or str(col).replace('.', '', 1).isdigit() for col in df.columns):
         df.columns = df.iloc[0]
         df = df[1:]
         df = df.reset_index(drop=True)
@@ -24,14 +25,18 @@ def clean_expenses(df: pd.DataFrame):
         .str.replace(r"\s+", "_", regex=True)
     )
     
-    # Parse and validate date
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    # Drop any column whose name is not a string
+    df = df.loc[:, df.columns.notna()]
     
+    print(f"[cleaner] columns after normalization: {df.columns.tolist()}")
+    
+    # Parse and validate date
     df["needs_cleaning"] = False
-    df.loc[df["date"].isna(), "needs_cleaning"] = True
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df.loc[df["date"].isna(), "needs_cleaning"] = True
     
     # Coerce amount to numeric; flag non-numeric rows with needs_cleaning=True.
-    
     for col in ("amount", "balance"):
         if col in df.columns:
             cleaned = (
@@ -43,9 +48,10 @@ def clean_expenses(df: pd.DataFrame):
             df[col] = pd.to_numeric(cleaned, errors="coerce")
             df.loc[df[col].isna(), "needs_cleaning"] = True
     
-    # Strip whitespace from string columns
+    # Strip whitespace from string columns only (exclude numeric/datetime/bool)
     str_cols = df.select_dtypes(include="object").columns
-    df[str_cols] = df[str_cols].apply(lambda col: col.str.strip())
+    for col in str_cols:
+        df[col] = df[col].apply(lambda v: v.strip() if isinstance(v, str) else v)
 
     # Fill missing description/notes with empty string
     for col in ("description", "note"):
@@ -53,7 +59,7 @@ def clean_expenses(df: pd.DataFrame):
             df[col] = df[col].fillna("")
 
     # Add source api
-    df["source"] = "python-api"
+    df["source_data"] = "python-api"
 
     # Drop unused columns
     df = df.drop(
@@ -64,6 +70,5 @@ def clean_expenses(df: pd.DataFrame):
     )
 
     df = df.dropna(subset=["date"])
-    df = df.drop_duplicates()
 
     return df
