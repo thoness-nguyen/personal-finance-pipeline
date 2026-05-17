@@ -6,7 +6,7 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import { fetchSheetData, parseOjectFromSheet, parseCsvFromObject } from "../services/SpreadsheetService";
-import { downloadCsvFromGCS, uploadCsvToGCS } from "../services/GcsService";
+import { downloadCsvFromGCS, uploadCsvToGCS, appendCsvToGCS } from "../services/GcsService";
 import { cleanExpense } from "../services/Cleaner";
 
 const router = Router();
@@ -50,9 +50,9 @@ async function pushRawToGCS(sheetId: string, worksheetName: string) {
     // 3. Convert to CSV string
     const csvString = await parseCsvFromObject(records);
 
-    // 4. Upload raw CSV to GCS
-    const destinationBlob = `raw/expenses_raw_nodejs.csv`;
-    await uploadCsvToGCS(csvString, destinationBlob);
+    // 4. Append new rows to existing raw CSV in GCS (creates if not exists, deduplicates if exists)
+    const destinationBlob = `raw/expenses_raw_ver_old.csv`;
+    await appendCsvToGCS(csvString, destinationBlob);
 
     return { records, destinationBlob };
 }
@@ -69,5 +69,5 @@ async function pushProcessedToGCS(destinationBlob: string) {
   const cleanedCsv = await parseCsvFromObject(cleanedData.data);
 
   // 4. Upload processed CSV
-  await uploadCsvToGCS(cleanedCsv, destinationBlob.replace("raw/", "processed/").replace("expenses_raw_nodejs.csv", "expenses_cleaned_nodejs.csv"));
+  await uploadCsvToGCS(cleanedCsv, destinationBlob.replace("raw/", "processed/").replace("expenses_raw_ver_old.csv", "expenses_cleaned_ver_old.csv"));
 }
