@@ -23,7 +23,7 @@ def test_resolve_base_url_ignores_empty_values(monkeypatch):
     assert result == "http://default"
 
 
-def test_run_python_api_uses_default_when_env_is_empty(monkeypatch):
+def test_run_python_api_falls_back_to_default_when_env_is_empty(monkeypatch):
     monkeypatch.setenv("PYTHON_API_URL", "")
 
     with patch("orchestrator.run_pipeline.httpx.post", return_value=_mock_response({"ok": True})) as post:
@@ -33,7 +33,7 @@ def test_run_python_api_uses_default_when_env_is_empty(monkeypatch):
     post.assert_called_once_with("http://localhost:8000/api/v1/ingest", timeout=60)
 
 
-def test_run_nodejs_fallback_uses_node_api_url_alias(monkeypatch):
+def test_run_nodejs_fallback_prefers_node_api_url_when_nodejs_api_url_empty(monkeypatch):
     monkeypatch.setenv("NODEJS_API_URL", "")
     monkeypatch.setenv("NODE_API_URL", "https://node.example.com/")
 
