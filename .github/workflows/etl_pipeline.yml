@@ -46,6 +46,27 @@ jobs:
           NODE_API_PORT=3000
           EOF
 
+      - name: Validate required secrets
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          SHEET_NAME: ${{ secrets.SHEET_NAME }}
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
+        run: |
+          missing=()
+          [ -z "$SHEET_ID" ]                       && missing+=("SHEET_ID")
+          [ -z "$SHEET_NAME" ]                     && missing+=("SHEET_NAME")
+          [ -z "$GCS_BUCKET_NAME" ]                && missing+=("GCS_BUCKET_NAME")
+          [ -z "$GCP_SA_KEY" ]                     && missing+=("GCP_SA_KEY")
+          [ -z "$GOOGLE_SHEETS_CREDENTIALS_JSON" ] && missing+=("GOOGLE_SHEETS_CREDENTIALS_JSON")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "ERROR: Missing required GitHub secrets: ${missing[*]}"
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
       - name: Build Docker images
         run: docker compose build python-api nodejs-fallback
 
