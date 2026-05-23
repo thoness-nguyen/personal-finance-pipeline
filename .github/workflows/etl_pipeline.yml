@@ -57,14 +57,15 @@ jobs:
           echo "Waiting for services to start..."
           HEALTHY=false
           for i in $(seq 1 60); do
-            PY=$(curl -sf http://localhost:8000/health && echo ok || echo fail)
-            ND=$(curl -sf http://localhost:3000/health && echo ok || echo fail)
-            if [ "$PY" = "ok" ] && [ "$ND" = "ok" ]; then
+            if curl -sf http://localhost:8000/health -o /dev/null && \
+               curl -sf http://localhost:3000/health -o /dev/null; then
               echo "Both services are up after $i attempt(s)"
               HEALTHY=true
               break
             fi
-            echo "Attempt $i/60 — python=$PY nodejs=$ND — retrying in 5s..."
+            PY_STATUS=$(curl -sf http://localhost:8000/health -o /dev/null && echo ok || echo fail)
+            ND_STATUS=$(curl -sf http://localhost:3000/health -o /dev/null && echo ok || echo fail)
+            echo "Attempt $i/60 — python=$PY_STATUS nodejs=$ND_STATUS — retrying in 5s..."
             sleep 5
           done
           if [ "$HEALTHY" != "true" ]; then
