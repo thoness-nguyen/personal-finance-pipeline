@@ -23,9 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: personal-finance-pipeline
 
     steps:
       - name: Checkout repository
@@ -69,6 +66,7 @@ jobs:
             exit 1
           fi
           echo "All required secrets are present."
+
       - name: Build Docker images
         run: docker compose build python-api nodejs-fallback
 
