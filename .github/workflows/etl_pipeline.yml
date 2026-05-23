@@ -23,9 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: personal-finance-pipeline
 
     steps:
       - name: Checkout repository
@@ -49,22 +46,33 @@ jobs:
           NODE_API_PORT=3000
           EOF
 
+      - name: Build Docker images
+        run: docker compose build python-api nodejs-fallback
+
       - name: Start Docker services
         run: docker compose up -d python-api nodejs-fallback
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for services to start..."
-          for i in $(seq 1 30); do
+          HEALTHY=false
+          for i in $(seq 1 60); do
             PY=$(curl -sf http://localhost:8000/health && echo ok || echo fail)
             ND=$(curl -sf http://localhost:3000/health && echo ok || echo fail)
             if [ "$PY" = "ok" ] && [ "$ND" = "ok" ]; then
-              echo "Both services are up"
+              echo "Both services are up after $i attempt(s)"
+              HEALTHY=true
               break
             fi
-            echo "Attempt $i/30 — python=$PY nodejs=$ND — retrying in 5s..."
+            echo "Attempt $i/60 — python=$PY nodejs=$ND — retrying in 5s..."
             sleep 5
           done
+          if [ "$HEALTHY" != "true" ]; then
+            echo "Services failed to start. Docker logs:"
+            docker compose logs python-api
+            docker compose logs nodejs-fallback
+            exit 1
+          fi
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
