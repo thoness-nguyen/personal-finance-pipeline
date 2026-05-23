@@ -14,9 +14,18 @@ from datetime import datetime
 import os
 
 
+def _resolve_base_url(*env_names: str, default: str) -> str:
+    """Return the first non-empty URL from env vars; otherwise return default."""
+    for env_name in env_names:
+        value = os.getenv(env_name, "").strip()
+        if value:
+            return value.rstrip("/")
+    return default.rstrip("/")
+
+
 def run_python_api() -> dict:
     """POST to the Python FastAPI /api/v1/ingest endpoint."""
-    url = os.getenv("PYTHON_API_URL", "http://localhost:8000")
+    url = _resolve_base_url("PYTHON_API_URL", default="http://localhost:8000")
     response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
     response.raise_for_status()
     return response.json()
@@ -24,7 +33,11 @@ def run_python_api() -> dict:
 
 def run_nodejs_fallback() -> dict:
     """POST to the Node.js fallback /api/v1/ingest endpoint."""
-    url = os.getenv("NODEJS_API_URL", "http://localhost:3000")
+    url = _resolve_base_url(
+        "NODEJS_API_URL",
+        "NODE_API_URL",
+        default="http://localhost:3000",
+    )
     response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
     response.raise_for_status()
     return response.json()
