@@ -2,7 +2,7 @@
 # File: .github/workflows/etl_pipeline.yml
 # Purpose: GitHub Actions workflow that runs the pipeline orchestrator on a
 #          daily schedule (2 AM UTC) and supports manual trigger.
-#          Invokes orchestrator/run_pipeline.py to ingest expense files.
+#          Spins up Docker services inside the runner, then calls the orchestrator.
 # =============================================================================
 
 name: ETL Pipeline
@@ -23,10 +23,59 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: personal-finance-pipeline
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Write credentials files
+        run: |
+          mkdir -p credentials
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' > credentials/finance-pipeline-gcs-writer-dev.json
+          printf '%s' '${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}' > credentials/finance-pipeline-sheets-reader-dev.json
+
+      - name: Create .env file
+        run: |
+          cat <<'EOF' > .env
+          SHEET_ID=${{ secrets.SHEET_ID }}
+          SHEET_NAME=${{ secrets.SHEET_NAME }}
+          GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}
+          GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/finance-pipeline-gcs-writer-dev.json
+          GOOGLE_SHEETS_CREDENTIALS=/app/credentials/finance-pipeline-sheets-reader-dev.json
+          PYTHON_API_PORT=8000
+          NODE_API_PORT=3000
+          EOF
+
+      - name: Build Docker images
+        run: docker compose build python-api nodejs-fallback
+
+      - name: Start Docker services
+        run: docker compose up -d python-api nodejs-fallback
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to start..."
+          HEALTHY=false
+          for i in $(seq 1 60); do
+            PY=$(curl -sf http://localhost:8000/health && echo ok || echo fail)
+            ND=$(curl -sf http://localhost:3000/health && echo ok || echo fail)
+            if [ "$PY" = "ok" ] && [ "$ND" = "ok" ]; then
+              echo "Both services are up after $i attempt(s)"
+              HEALTHY=true
+              break
+            fi
+            echo "Attempt $i/60 — python=$PY nodejs=$ND — retrying in 5s..."
+            sleep 5
+          done
+          if [ "$HEALTHY" != "true" ]; then
+            echo "Services failed to start. Docker logs:"
+            docker compose logs python-api
+            docker compose logs nodejs-fallback
+            exit 1
+          fi
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -34,14 +83,17 @@ jobs:
           python-version: "3.11"
 
       - name: Install orchestrator dependencies
-        run: |
-          pip install httpx python-dotenv
+        run: pip install httpx python-dotenv
 
       - name: Run pipeline orchestrator
         env:
-          PYTHON_API_URL: ${{ secrets.PYTHON_API_URL }}
-          NODEJS_API_URL: ${{ secrets.NODEJS_API_URL }}
+          PYTHON_API_URL: http://localhost:8000
+          NODEJS_API_URL: http://localhost:3000
           GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
         run: |
           python orchestrator/run_pipeline.py \
             --service "${{ github.event.inputs.service || 'auto' }}"
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose down
