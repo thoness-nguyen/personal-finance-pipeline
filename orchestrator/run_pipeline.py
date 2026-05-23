@@ -17,8 +17,8 @@ import os
 def _resolve_base_url(*env_names: str, default: str) -> str:
     """Return the first non-empty URL from env vars; otherwise return default."""
     for env_name in env_names:
-        value = os.getenv(env_name, "")
-        if value and value.strip():
+        value = os.getenv(env_name, "").strip()
+        if value:
             return value.rstrip("/")
     return default.rstrip("/")
 
