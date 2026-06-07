@@ -20,7 +20,7 @@ SELECT YEAR(expense_date) AS yr,
         ),
         2
     ) AS pct_of_month
-FROM { { ref('stg_expenses') } }
+FROM {{ref('stg_expenses')}}
 WHERE expense_date IS NOT NULL
 GROUP BY 1,
     2,

@@ -23,8 +23,8 @@ SELECT t.transaction_id AS id,
     t.spending_type,
     t.is_regretted,
     t.source_data AS source
-FROM { { source('finance_db', 'transactions') } } t
-    LEFT JOIN { { source('finance_db', 'categories') } } c ON t.category_id = c.category_id
-    LEFT JOIN { { source('finance_db', 'subcategories') } } s ON t.subcategory_id = s.subcategory_id
-    LEFT JOIN { { source('finance_db', 'accounts') } } a ON t.account_id = a.account_id
+FROM {{source('finance_db', 'transactions')}} t
+    LEFT JOIN {{source('finance_db', 'categories')}} c ON t.category_id = c.category_id
+    LEFT JOIN {{source('finance_db', 'subcategories')}} s ON t.subcategory_id = s.subcategory_id
+    LEFT JOIN {{source('finance_db', 'accounts')}} a ON t.account_id = a.account_id
 WHERE t.transaction_type IN ('expense', 'credit_purchase')

@@ -15,7 +15,7 @@ SELECT COALESCE(description, '(no description)') AS merchant,
     RANK() OVER (
         ORDER BY SUM(amount) DESC
     ) AS spend_rank
-FROM { { ref('stg_expenses') } }
+FROM {{ref('stg_expenses')}}
 WHERE expense_date IS NOT NULL
 GROUP BY 1,
     2

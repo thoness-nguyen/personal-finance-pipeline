@@ -23,7 +23,7 @@ SELECT YEAR(expense_date) AS yr,
             ELSE 0
         END
     ) AS extra_spend
-FROM { { ref('stg_expenses') } }
+FROM {{ref('stg_expenses')}}
 WHERE expense_date IS NOT NULL
 GROUP BY 1,
     2
