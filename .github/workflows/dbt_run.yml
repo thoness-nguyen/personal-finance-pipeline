@@ -22,9 +22,29 @@ jobs:
       contents: read
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Initialize database schema
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.MYSQL_PASSWORD }}" < database/schema/init.sql
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -36,25 +56,19 @@ jobs:
           pip install dbt-mysql
 
       - name: Write dbt profiles.yml
-        env:
-          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          MYSQL_USER: ${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           mkdir -p ~/.dbt
-          # TODO: Replace this heredoc with a secure profiles.yml generation script
           cat > ~/.dbt/profiles.yml << EOF
           finance_pipeline:
             target: dev
             outputs:
               dev:
                 type: mysql
-                server: "$MYSQL_HOST"
+                server: "127.0.0.1"
                 port: 3306
-                database: "$MYSQL_DATABASE"
-                username: "$MYSQL_USER"
-                password: "$MYSQL_PASSWORD"
+                database: "${{ secrets.MYSQL_DATABASE }}"
+                username: "${{ secrets.MYSQL_USER }}"
+                password: "${{ secrets.MYSQL_PASSWORD }}"
                 schema: finance_db
           EOF
 
