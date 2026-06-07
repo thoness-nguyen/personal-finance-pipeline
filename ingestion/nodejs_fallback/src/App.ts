@@ -25,7 +25,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // Routes
-app.use("/api/v1", ingestRouter);
+app.use("/api/v1/ingest", ingestRouter);
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

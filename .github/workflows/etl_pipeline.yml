@@ -45,6 +45,11 @@ jobs:
           GOOGLE_SHEETS_CREDENTIALS=/app/credentials/finance-pipeline-sheets-reader-dev.json
           PYTHON_API_PORT=8000
           NODE_API_PORT=3000
+          MYSQL_HOST=mysql
+          MYSQL_PORT=3306
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER=${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
           EOF
 
       - name: Validate required secrets
@@ -54,6 +59,9 @@ jobs:
           GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           missing=()
           [ -z "$SHEET_ID" ]                       && missing+=("SHEET_ID")
@@ -61,6 +69,9 @@ jobs:
           [ -z "$GCS_BUCKET_NAME" ]                && missing+=("GCS_BUCKET_NAME")
           [ -z "$GCP_SA_KEY" ]                     && missing+=("GCP_SA_KEY")
           [ -z "$GOOGLE_SHEETS_CREDENTIALS_JSON" ] && missing+=("GOOGLE_SHEETS_CREDENTIALS_JSON")
+          [ -z "$MYSQL_DATABASE" ]                 && missing+=("MYSQL_DATABASE")
+          [ -z "$MYSQL_USER" ]                     && missing+=("MYSQL_USER")
+          [ -z "$MYSQL_PASSWORD" ]                 && missing+=("MYSQL_PASSWORD")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "ERROR: Missing required GitHub secrets: ${missing[*]}"
             echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
@@ -72,11 +83,26 @@ jobs:
         run: docker compose build python-api nodejs-fallback
 
       - name: Start Docker services
-        run: docker compose up -d python-api nodejs-fallback
+        run: docker compose up -d mysql python-api nodejs-fallback
 
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for services to start..."
+          echo "Waiting for MySQL to be ready..."
+          for i in $(seq 1 30); do
+            if docker compose exec -T mysql mysqladmin ping -u root -p"${{ secrets.MYSQL_PASSWORD }}" --silent 2>/dev/null; then
+              echo "MySQL is ready after $i attempt(s)"
+              break
+            fi
+            echo "Attempt $i/30 — MySQL not ready — retrying in 5s..."
+            sleep 5
+            if [ $i -eq 30 ]; then
+              echo "MySQL failed to start. Logs:"
+              docker compose logs mysql
+              exit 1
+            fi
+          done
+
+          echo "Waiting for API services to start..."
           HEALTHY=false
           for i in $(seq 1 60); do
             if curl -sf http://localhost:8000/health -o /dev/null && \
