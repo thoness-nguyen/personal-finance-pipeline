@@ -13,13 +13,18 @@ function deduplicateRows(rows: Record<string, any>[]): Record<string, any>[] {
     for (const k of Object.keys(row)) {
       normalized[k.trim().toLowerCase()] = row[k];
     }
-    const key = DEDUP_KEY_COLS.map((col) => normalized[col] ?? "").join("|");
-    seen.set(key, row);
+    const matchedKeys = DEDUP_KEY_COLS.filter((col) => col in normalized);
+
+    const key = matchedKeys.length > 0
+      ? matchedKeys.map((col) => normalized[col] ?? "").join("|")
+      : Object.values(normalized).map((v) => v ?? "").join("|");
+    
+      seen.set(key, row);
   }
   return Array.from(seen.values());
 }
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../../../../.env") });
 
 const keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_LOCAL;
 const storage = new Storage(keyFilename ? { keyFilename } : {});
@@ -32,8 +37,9 @@ export async function appendCsvToGCS(newCsv: string, destinationPath: string) {
     const parsed = Papa.parse<Record<string, any>>(existing.toString(), { header: true, skipEmptyLines: true });
     existingRows = parsed.data;
   } catch (err: any) {
-    if (!err?.message?.includes("No such object")) {
-        throw err;
+    const msg = err?.message ?? "";
+    if (!msg.includes("No such object") && !msg.includes("Requested entity was not found")) {
+      throw err;
     }
   }
   const newRows = Papa.parse<Record<string, any>>(newCsv, { header: true, skipEmptyLines: true }).data;

@@ -18,7 +18,6 @@ export function cleanExpense(data: string) {
         "input",
         "output",
         "amount_balance",
-        "note",
         "total_expense_monthly",
         "total_extra_using",
         "total_renting_expense",

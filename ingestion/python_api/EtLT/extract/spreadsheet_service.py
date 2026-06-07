@@ -19,7 +19,7 @@ def get_gspread_client(credentials_path: str):
     creds = Credentials.from_service_account_file(credentials_path, scopes = SCOPES)
     return gspread.authorize(creds)
 
-def fetch_sheet_data(sheet_id: str, worksheet_name: str, credentials_path: str) -> pd.DataFrame:
+def fetch_sheet_data(sheet_id: str, worksheet_name: str, credentials_path: str, as_type: str = "dataframe"):
     """Fetches data from a specified Google Sheets worksheet and returns it as a DataFrame."""
     
     client = get_gspread_client(credentials_path)
@@ -27,11 +27,25 @@ def fetch_sheet_data(sheet_id: str, worksheet_name: str, credentials_path: str) 
     rows = worksheet.get_all_values()
 
     if not rows:
-        return pd.DataFrame()
+        if as_type == "dataframe":
+            return pd.DataFrame()
+        elif as_type == "list":
+            return []
+        else:
+            return rows
 
     # Use first row as column headers (matches Node.js behaviour)
     header, *data = rows
-    return pd.DataFrame(data, columns=header)
+    
+    data = [row for row in data if any(cell.strip() for cell in row)]
+    
+    if as_type == "dataframe":
+        df = pd.DataFrame(data, columns=header)
+        return df
+    elif as_type == "list":
+        return [dict(zip(header, row)) for row in data]
+    else:
+        return rows
 
 def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
     """

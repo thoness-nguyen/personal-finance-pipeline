@@ -1,73 +1,52 @@
 // =============================================================================
 // File: src/routes/Ingest.ts
-// Purpose: POST /ingest — fetches data from Google Sheets, parses it,
-//          uploads raw CSV to GCS.  Mirrors the Python API ETL flow.
+// Purpose: Generic manifest-driven ingestion endpoints.
+//
+//   POST /ingest/all           � run the full pipeline (all enabled sources)
+//   POST /ingest/:source_id    � run a single source by id
+//
+//   All execution logic lives in engine/Runner.ts which reads pipeline_manifest.json.
 // =============================================================================
 
-import { Router, Request, Response, NextFunction } from "express";
-import { fetchSheetData, parseOjectFromSheet, parseCsvFromObject } from "../services/SpreadsheetService";
-import { downloadCsvFromGCS, uploadCsvToGCS, appendCsvToGCS } from "../services/GcsService";
-import { cleanExpense } from "../services/Cleaner";
+import { Router, Request, Response } from "express";
+import { runPipeline } from "../engine/Runner";
 
 const router = Router();
 
-router.post("/ingest", async (_req: Request, res: Response, next: NextFunction) => {
+// POST /ingest/all
+router.post("/all", async (_req: Request, res: Response) => {
   try {
-    const sheetId = process.env.SHEET_ID!;
-    const worksheetName = process.env.SHEET_NAME!;
-
-    if (!sheetId || !worksheetName) {
-      res.status(400).json({ error: "SHEET_ID or SHEET_NAME env var is missing." });
-      return;
-    }
-
-    // Step 1: fetch raw data from Sheets and upload to GCS
-    const { records, destinationBlob } = await pushRawToGCS(sheetId, worksheetName);
-
-    // Step 2: download raw CSV, clean it, upload processed CSV
-    await pushProcessedToGCS(destinationBlob);
-
-    res.json({
-      success: true,
+    const results = await runPipeline();
+    const statuses = Object.values(results).map((r) => r.status);
+    const allOk    = statuses.every((s) => s === "ok");
+    return res.status(allOk ? 200 : 207).json({
+      status:   allOk ? "ok" : "partial",
       fallback: true,
-      rows: records.length,
-      gcs_uri: `gs://${process.env.GCS_BUCKET_NAME}/${destinationBlob}`,
+      sources:  results,
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    console.error("[Ingest] /all failed:", err);
+    return res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// POST /ingest/:source_id
+router.post("/:source_id", async (req: Request, res: Response) => {
+  const source_id = req.params["source_id"] as string;
+  try {
+    const results = await runPipeline([source_id]);
+    const result  = results[source_id];
+    if (!result) {
+      return res.status(404).json({ status: "error", message: `Source '${source_id}' not found or disabled.` });
+    }
+    return res.status(result.status === "ok" ? 200 : 500).json({
+      fallback: true,
+      ...result,
+    });
+  } catch (err: any) {
+    console.error(`[Ingest] /${source_id} failed:`, err);
+    return res.status(500).json({ status: "error", message: err.message });
   }
 });
 
 export default router;
-
-async function pushRawToGCS(sheetId: string, worksheetName: string) {
-    // 1. Fetch raw rows from Google Sheets
-    const rawData = await fetchSheetData(sheetId, worksheetName);
-
-    // 2. Parse rows into objects
-    const records = parseOjectFromSheet(rawData);
-
-    // 3. Convert to CSV string
-    const csvString = await parseCsvFromObject(records);
-
-    // 4. Append new rows to existing raw CSV in GCS (creates if not exists, deduplicates if exists)
-    const destinationBlob = `raw/expenses_raw.csv`;
-    await appendCsvToGCS(csvString, destinationBlob);
-
-    return { records, destinationBlob };
-}
-
-async function pushProcessedToGCS(destinationBlob: string) {
-  // 1. Download raw CSV from GCS
-  const raw = await downloadCsvFromGCS(destinationBlob);
-
-  // 2. Clean the data
-  const rawString  = raw.toString();
-  const cleanedData = cleanExpense(rawString);
-
-  // 3. Convert cleaned rows to CSV string
-  const cleanedCsv = await parseCsvFromObject(cleanedData.data);
-
-  // 4. Upload processed CSV
-  await uploadCsvToGCS(cleanedCsv, destinationBlob.replace("raw/", "processed/").replace("expenses_raw.csv", "expenses_cleaned.csv"));
-}
