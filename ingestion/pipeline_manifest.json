@@ -1,0 +1,60 @@
+{
+    "version": "1.0",
+    "sources": [
+        {
+            "id": "plans",
+            "enabled": true,
+            "sheet_id": "1D1IuN2TQSRywS57aF-5-8sg4zt_5F64NUsv6yKo4a0g",
+            "sheet_name": "Monthly_Plans",
+            "raw_blob": "raw/plans_raw.csv",
+            "processed_blob": "processed/plans_cleaned.csv",
+            "cleaner": {
+                "enabled": false,
+                "path": null
+            },
+            "loader": {
+                "enabled": true,
+                "path": "EtLT.load.plans"
+            },
+            "depends_on": []
+        },
+        {
+            "id": "plan_items",
+            "enabled": true,
+            "sheet_id": "1D1IuN2TQSRywS57aF-5-8sg4zt_5F64NUsv6yKo4a0g",
+            "sheet_name": "Plan_Items",
+            "raw_blob": "raw/plan_items_raw.csv",
+            "processed_blob": "processed/plan_items_cleaned.csv",
+            "cleaner": {
+                "enabled": false,
+                "path": null
+            },
+            "loader": {
+                "enabled": true,
+                "path": "EtLT.load.plan_items"
+            },
+            "depends_on": [
+                "plans"
+            ]
+        },
+        {
+            "id": "expenses",
+            "enabled": true,
+            "sheet_id": "1D1IuN2TQSRywS57aF-5-8sg4zt_5F64NUsv6yKo4a0g",
+            "sheet_name": "Daily_Expense_Ver1.2",
+            "raw_blob": "raw/expenses_raw.csv",
+            "processed_blob": "processed/expenses_cleaned.csv",
+            "cleaner": {
+                "enabled": true,
+                "path": "EtLT.transform.expenses"
+            },
+            "loader": {
+                "enabled": true,
+                "path": "EtLT.load.transactions"
+            },
+            "depends_on": [
+                "plans"
+            ]
+        }
+    ]
+}

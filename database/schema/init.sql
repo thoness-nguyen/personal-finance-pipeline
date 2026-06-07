@@ -10,9 +10,9 @@
 --   5. Loan / lend-money lifecycle tracked end-to-end
 --
 -- Tables (in FK order):
---   accounts · categories · subcategories · monthly_plans · transactions
+--   accounts · categories · subcategories · monthly_plans · monthly_plan_items · transactions
 -- Views:
---   v_account_cash_balance · v_monthly_expense_summary · v_credit_outstanding
+--   v_account_cash_balance · v_monthly_expense_summary · v_credit_outstanding · v_budget_vs_actual
 -- =============================================================================
 CREATE DATABASE IF NOT EXISTS finance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE finance_db;
@@ -90,7 +90,24 @@ CREATE TABLE IF NOT EXISTS monthly_plans (
   )
 );
 -- ============================================================
--- 5. TRANSACTIONS  (single source of truth for every money event)
+-- 5. MONTHLY PLAN ITEMS
+--    Budget breakdown per category for each monthly plan.
+--    One row per category per month — sum of budgeted = monthly_plans.fixed_budget.
+--    Used to compare planned vs actual spend per category.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS monthly_plan_items (
+  item_id INT NOT NULL AUTO_INCREMENT,
+  plan_id INT NOT NULL,
+  category_id INT NOT NULL,
+  budgeted DECIMAL(15, 0) NOT NULL DEFAULT 0,
+  note VARCHAR(255),
+  PRIMARY KEY (item_id),
+  UNIQUE KEY uq_plan_category (plan_id, category_id),
+  FOREIGN KEY (plan_id) REFERENCES monthly_plans (plan_id),
+  FOREIGN KEY (category_id) REFERENCES categories (category_id)
+);
+-- ============================================================
+-- 6. TRANSACTIONS  (single source of truth for every money event)
 --
 --  transaction_type  — what kind of movement is this?
 --  spending_type     — was this within your fixed monthly budget or extra?
@@ -116,30 +133,34 @@ CREATE TABLE IF NOT EXISTS transactions (
   transaction_id INT NOT NULL AUTO_INCREMENT,
   transaction_date DATE NOT NULL,
   account_id INT NOT NULL,
+  plan_id INT,
+  -- links to monthly_plans; NULL for transfers/loans
   category_id INT,
   subcategory_id INT,
+  -- Allowed values for transaction_type:
+  --   income           = salary, mom gives you money, any inflow
+  --   expense          = cash / momo spend
+  --   transfer_out     = move money out of THIS account (savings -> expense account)
+  --   transfer_in      = receive a transfer INTO this account
+  --   credit_purchase  = buy with credit card; counts for budget but NOT cash yet
+  --   credit_payment   = pay off credit card bill; real cash impact only
+  --   loan_given       = you lend money to someone
+  --   loan_received    = you borrow money
+  --   loan_repayment_in  = someone pays you back
+  --   loan_repayment_out = you repay a debt
   transaction_type ENUM(
     'income',
-    -- salary, mom gives you money, any inflow
     'expense',
-    -- cash / momo spend
     'transfer_out',
-    -- move money out of THIS account (e.g. savings → expense)
     'transfer_in',
-    -- receive a transfer INTO this account
     'credit_purchase',
-    -- buy with credit card; expense for budgeting, NOT cash
     'credit_payment',
-    -- pay off credit card bill; cash impact only
     'loan_given',
-    -- you lend money to someone
     'loan_received',
-    -- you borrow money
     'loan_repayment_in',
-    -- someone pays you back
-    'loan_repayment_out' -- you repay a debt
+    'loan_repayment_out'
   ) NOT NULL,
-  -- fixed = part of your planned monthly budget
+  -- fixed = within your planned monthly budget
   -- extra = unplanned; pulled from savings
   -- NULL  = not applicable (income, transfers, loans)
   spending_type ENUM('fixed', 'extra'),
@@ -147,19 +168,20 @@ CREATE TABLE IF NOT EXISTS transactions (
   -- always positive; VND has no decimals
   payment_method ENUM('cash', 'bank_transfer', 'credit_card', 'momo'),
   note TEXT,
-  -- for credit_payment: optionally reference the credit_purchase(s) it covers
-  -- for loan_repayment: reference the original loan_given / loan_received
   related_transaction_id INT,
-  -- mark a spend you later regretted (e.g. wasteful, impulse buy)
-  -- query: SELECT SUM(amount) FROM transactions WHERE is_regretted = TRUE AND MONTH(transaction_date) = ?
+  -- credit_payment -> credit_purchase; loan repayment -> original loan
   is_regretted BOOLEAN NOT NULL DEFAULT FALSE,
+  source_data VARCHAR(10) NOT NULL DEFAULT 'nodejs',
+  -- mark impulse/wasteful spends
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (transaction_id),
   FOREIGN KEY (account_id) REFERENCES accounts (account_id),
+  FOREIGN KEY (plan_id) REFERENCES monthly_plans (plan_id),
   FOREIGN KEY (category_id) REFERENCES categories (category_id),
   FOREIGN KEY (subcategory_id) REFERENCES subcategories (subcategory_id),
   FOREIGN KEY (related_transaction_id) REFERENCES transactions (transaction_id),
-  CONSTRAINT chk_amount_positive CHECK (amount > 0)
+  CONSTRAINT chk_amount_positive CHECK (amount > 0),
+  CONSTRAINT chk_source_data CHECK (source_data IN ('nodejs', 'python'))
 );
 CREATE INDEX idx_tx_date ON transactions (transaction_date);
 CREATE INDEX idx_tx_type ON transactions (transaction_type);
@@ -252,22 +274,42 @@ FROM accounts a
 WHERE a.account_type = 'credit'
 GROUP BY a.account_id,
   a.account_name;
+-- ── D: Budget vs Actual per category per month ───────────────
+-- Joins monthly_plan_items (what you planned) with actual transactions.
+-- remaining > 0 = under budget; remaining < 0 = over budget.
+CREATE OR REPLACE VIEW v_budget_vs_actual AS
+SELECT mp.plan_year AS yr,
+  mp.plan_month AS mo,
+  c.category_name,
+  mpi.budgeted,
+  COALESCE(SUM(t.amount), 0) AS actual_spent,
+  mpi.budgeted - COALESCE(SUM(t.amount), 0) AS remaining
+FROM monthly_plan_items mpi
+  JOIN monthly_plans mp ON mpi.plan_id = mp.plan_id
+  JOIN categories c ON mpi.category_id = c.category_id
+  LEFT JOIN transactions t ON t.plan_id = mp.plan_id
+  AND t.category_id = mpi.category_id
+  AND t.transaction_type IN ('expense', 'credit_purchase')
+GROUP BY mp.plan_year,
+  mp.plan_month,
+  c.category_name,
+  mpi.budgeted;
 -- ============================================================
 -- SEED DATA  — accounts, categories, subcategories
 -- ============================================================
 INSERT INTO accounts (account_name, account_type, note)
 VALUES (
-    'Savings Account',
+    'savings (SC Bank)',
     'savings',
     'Receives salary; source for monthly transfer'
   ),
   (
-    'Expense Account',
+    'expense (ACB)',
     'expense',
     'Day-to-day spending; funded at start of month'
   ),
   (
-    'Credit Card',
+    'credit (SC Credit)',
     'credit',
     'Pay later; track via credit_purchase / credit_payment'
   );
@@ -324,7 +366,7 @@ SELECT category_id,
   s.name
 FROM categories,
   (
-    SELECT 'Rent/Mortgage' name
+    SELECT 'Rent' name
     UNION ALL
     SELECT 'Electricity'
     UNION ALL
@@ -358,9 +400,9 @@ FROM categories,
   (
     SELECT 'Gym Membership' name
     UNION ALL
-    SELECT 'Haircut/Grooming'
+    SELECT 'Haircut'
     UNION ALL
-    SELECT 'Medicine/Clinic'
+    SELECT 'Medicine'
     UNION ALL
     SELECT 'Others'
   ) s
@@ -373,7 +415,9 @@ FROM categories,
   (
     SELECT 'Movies' name
     UNION ALL
-    SELECT 'Personal Hobbies'
+    SELECT 'Hobbies'
+    UNION ALL
+    SELECT 'Badminton'
     UNION ALL
     SELECT 'Games'
     UNION ALL
@@ -388,11 +432,11 @@ FROM categories,
   (
     SELECT 'Tuition' name
     UNION ALL
-    SELECT 'Courses/Workshops'
+    SELECT 'Courses'
     UNION ALL
     SELECT 'Books'
     UNION ALL
-    SELECT 'Others'
+    SELECT 'Degree'
   ) s
 WHERE category_name = 'Education';
 -- Shopping
@@ -405,8 +449,6 @@ FROM categories,
     UNION ALL
     SELECT 'Electronics'
     UNION ALL
-    SELECT 'Household Items'
-    UNION ALL
     SELECT 'Others'
   ) s
 WHERE category_name = 'Shopping';
@@ -416,7 +458,7 @@ SELECT category_id,
   s.name
 FROM categories,
   (
-    SELECT 'Dinner/Cafe' name
+    SELECT 'Dinner' name
     UNION ALL
     SELECT 'Gifts'
     UNION ALL
@@ -435,8 +477,6 @@ FROM categories,
     UNION ALL
     SELECT 'Family Extra'
     UNION ALL
-    SELECT 'Family Gifts'
-    UNION ALL
     SELECT 'Others'
   ) s
 WHERE category_name = 'Family';
@@ -453,8 +493,6 @@ SELECT category_id,
 FROM categories,
   (
     SELECT 'Lend to Friends' name
-    UNION ALL
-    SELECT 'Lend to Family'
     UNION ALL
     SELECT 'Borrow from Others'
     UNION ALL

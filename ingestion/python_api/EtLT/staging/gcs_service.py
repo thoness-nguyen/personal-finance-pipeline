@@ -42,7 +42,8 @@ def append_to_gcs(new_df: pd.DataFrame, blob_name: str) -> str:
     if key_cols:
         merged_df = merged_df.drop_duplicates(subset=key_cols, keep="last")
     else:
-        merged_df = merged_df.drop_duplicates()
+        str_df = merged_df.astype(str)
+        merged_df = merged_df.loc[~str_df.duplicated()]
 
     file_bytes = merged_df.to_csv(index=False).encode("utf-8-sig")
     return upload_to_gcs(file_bytes, blob_name)

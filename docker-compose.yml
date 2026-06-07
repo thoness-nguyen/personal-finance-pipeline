@@ -27,6 +27,9 @@ services:
       - finance-network
     volumes:
       - ./credentials:/app/credentials:ro
+      - ./ingestion/pipeline_manifest.json:/app/pipeline_manifest.json:ro
+    environment:
+      MANIFEST_PATH: /app/pipeline_manifest.json
     # TODO: add healthcheck once FastAPI app is implemented
 
   # ── FALLBACK INGESTION ────────────────────────────────────────
@@ -40,10 +43,12 @@ services:
     environment:
       GOOGLE_SHEETS_CREDENTIALS_LOCAL: ""
       GOOGLE_APPLICATION_CREDENTIALS_LOCAL: ""
+      MANIFEST_PATH: /app/pipeline_manifest.json
     networks:
       - finance-network
     volumes:
       - ./credentials:/app/credentials:ro
+      - ./ingestion/pipeline_manifest.json:/app/pipeline_manifest.json:ro
     # TODO: add healthcheck once Express app is implemented
 
   # ── DATABASE ──────────────────────────────────────────────────
