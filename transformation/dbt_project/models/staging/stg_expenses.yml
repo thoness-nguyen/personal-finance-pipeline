@@ -12,7 +12,7 @@ models:
     description: "Cleaned and standardised expenses staging model"
     columns:
       - name: id
-        description: "Primary key from the raw expenses table"
+        description: "transaction_id from the transactions table"
         tests:
           - not_null
           - unique
@@ -21,20 +21,28 @@ models:
         tests:
           - not_null
       - name: amount
-        description: "Expense amount in the transaction currency"
+        description: "Expense amount in VND"
         tests:
           - not_null
       - name: currency
-        description: "ISO 4217 currency code, e.g. USD"
+        description: "ISO currency code from the account (e.g. VND)"
       - name: description
-        description: "Free-text description of the expense"
-      - name: merchant_id
-        description: "Foreign key to the merchants table"
+        description: "Free-text note on the transaction"
       - name: category_id
         description: "Foreign key to the categories table"
         tests:
           - not_null
+      - name: category_name
+        description: "Category name joined from categories"
+      - name: subcategory_id
+        description: "Foreign key to the subcategories table"
+      - name: subcategory_name
+        description: "Subcategory name joined from subcategories"
       - name: payment_method
-        description: "Payment method used (e.g. credit card, cash)"
+        description: "Payment method used (cash, bank_transfer, credit_card, momo)"
+      - name: spending_type
+        description: "fixed = planned budget, extra = unplanned"
+      - name: is_regretted
+        description: "True if the spend was marked as wasteful/impulse"
       - name: source
-        description: "Ingestion service that created this record"
+        description: "Ingestion service that created this record (nodejs or python)"

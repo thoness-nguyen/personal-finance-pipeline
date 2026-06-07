@@ -13,11 +13,11 @@ sources:
     database: finance_db
     schema: finance_db
     tables:
-      - name: expenses
-        description: "Fact table containing individual expense records"
+      - name: transactions
+        description: "Fact table containing all money events (expenses, income, transfers, loans)"
       - name: categories
         description: "Lookup table for expense categories"
-      - name: merchants
-        description: "Lookup table for merchants"
-      - name: time_dim
-        description: "Date dimension table"
+      - name: subcategories
+        description: "Lookup table for subcategories, linked to categories"
+      - name: accounts
+        description: "Bank accounts and credit cards"
