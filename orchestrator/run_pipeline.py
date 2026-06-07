@@ -24,21 +24,21 @@ def _resolve_base_url(*env_names: str, default: str) -> str:
 
 
 def run_python_api() -> dict:
-    """POST to the Python FastAPI /api/v1/ingest endpoint."""
+    """POST to the Python FastAPI /api/v1/ingest/all endpoint."""
     url = _resolve_base_url("PYTHON_API_URL", default="http://localhost:8000")
-    response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
+    response = httpx.post(f"{url}/api/v1/ingest/all", timeout=60)
     response.raise_for_status()
     return response.json()
 
 
 def run_nodejs_fallback() -> dict:
-    """POST to the Node.js fallback /api/v1/ingest endpoint."""
+    """POST to the Node.js fallback /api/v1/ingest/all endpoint."""
     url = _resolve_base_url(
         "NODEJS_API_URL",
         "NODE_API_URL",
         default="http://localhost:3000",
     )
-    response = httpx.post(f"{url}/api/v1/ingest", timeout=60)
+    response = httpx.post(f"{url}/api/v1/ingest/all", timeout=60)
     response.raise_for_status()
     return response.json()
 
