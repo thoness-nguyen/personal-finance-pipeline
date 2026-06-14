@@ -20,7 +20,7 @@ def _get_bucket():
     client = storage.Client()
     return client.bucket(bucket_name)
 
-_DEDUP_KEY_COLS = ["date", "category", "sub_category", "type_payment", "balance"]
+_DEDUP_KEY_COLS = ["date", "account", "transaction_type", "amount", "type_payment", "category", "sub_category"]
 
 def append_to_gcs(new_df: pd.DataFrame, blob_name: str) -> str:
     """Download existing CSV, append new rows, deduplicate by key columns, re-upload."""

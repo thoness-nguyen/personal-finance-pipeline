@@ -3,7 +3,7 @@ import { Storage } from "@google-cloud/storage";
 import dotenv from "dotenv";
 import Papa from "papaparse";
 
-const DEDUP_KEY_COLS = ["date", "category", "sub_category", "type_payment", "balance"];
+const DEDUP_KEY_COLS = ["date", "account", "transaction_type", "amount", "type_payment", "category", "sub_category"];
 
 function deduplicateRows(rows: Record<string, any>[]): Record<string, any>[] {
   const seen = new Map<string, Record<string, any>>();

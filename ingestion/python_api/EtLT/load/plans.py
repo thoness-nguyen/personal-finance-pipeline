@@ -32,6 +32,7 @@ def load() -> int:
     file_bytes = download_from_gcs(_RAW_BLOB)
     df = pd.read_csv(BytesIO(file_bytes), encoding="utf-8-sig")
     df.columns = df.columns.str.strip().str.lower()
+    df = df.astype(object).where(pd.notnull(df), None)
 
     if df.empty:
         raise ValueError("Plans raw CSV is empty.")
