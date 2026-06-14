@@ -15,7 +15,7 @@ import { getConnection, buildLookupMaps, resolve, parseAmount } from "./DbHelper
 const PROCESSED_BLOB = "processed/expenses_cleaned.csv";
 
 const SQL = `
-  INSERT INTO transactions
+  INSERT IGNORE INTO transactions
     (transaction_date, account_id, transaction_type, spending_type,
      plan_id, category_id, subcategory_id, amount,
      payment_method, note, is_regretted, source_data)

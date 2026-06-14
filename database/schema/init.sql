@@ -181,7 +181,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   FOREIGN KEY (subcategory_id) REFERENCES subcategories (subcategory_id),
   FOREIGN KEY (related_transaction_id) REFERENCES transactions (transaction_id),
   CONSTRAINT chk_amount_positive CHECK (amount > 0),
-  CONSTRAINT chk_source_data CHECK (source_data IN ('nodejs', 'python'))
+  CONSTRAINT chk_source_data CHECK (source_data IN ('nodejs', 'python')),
+  UNIQUE KEY uq_transaction (transaction_date, account_id, transaction_type, spending_type, amount, payment_method, note(200))
 );
 CREATE INDEX idx_tx_date ON transactions (transaction_date);
 CREATE INDEX idx_tx_type ON transactions (transaction_type);
