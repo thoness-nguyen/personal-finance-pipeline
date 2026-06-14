@@ -26,17 +26,36 @@ models:
 
   - name: mart_monthly_summary
     columns:
-      - name: placeholder
+      - name: yr
         tests:
           - not_null
-        # TODO: Replace placeholder with real columns and add meaningful tests
+      - name: mo
+        tests:
+          - not_null
+      - name: total_spend
+        tests:
+          - not_null
 
   - name: mart_category_breakdown
     columns:
-      - name: placeholder
+      - name: yr
         tests:
           - not_null
-        # TODO: Replace placeholder with real columns and add meaningful tests
+      - name: category_name
+        tests:
+          - not_null
+      - name: total_spend
+        tests:
+          - not_null
+
+  - name: mart_top_merchants
+    columns:
+      - name: merchant
+        tests:
+          - not_null
+      - name: total_spend
+        tests:
+          - not_null
 
   - name: mart_top_merchants
     columns:

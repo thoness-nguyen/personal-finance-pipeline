@@ -77,7 +77,7 @@ def _parse_amount(value) -> int:
     """Strip commas/whitespace → int (VND has no decimals)."""
     if value is None or str(value).strip() == "":
         return 0
-    cleaned = str(value).replace(",", "").replace(".", "").strip()
+    cleaned = str(value).replace(",", "").strip()
     try:
         return int(float(cleaned))
     except (ValueError, TypeError):
