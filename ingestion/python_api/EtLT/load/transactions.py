@@ -18,7 +18,7 @@ from EtLT.staging.gcs_service import download_from_gcs
 _PROCESSED_BLOB = "processed/expenses_cleaned.csv"
 
 _SQL = """
-    INSERT INTO transactions
+    INSERT IGNORE INTO transactions
         (transaction_date, account_id, transaction_type, spending_type,
          plan_id, category_id, subcategory_id, amount,
          payment_method, note, is_regretted, source_data)
@@ -72,7 +72,7 @@ def load() -> int:
                     row.get("type_payment")     or None,
                     row.get("note")             or None,
                     int(regret),
-                    row.get("source_data", "python"),
+                    "python",  # always stamp python-api as the source; do not read from CSV
                 ))
 
             cursor.executemany(_SQL, data)
