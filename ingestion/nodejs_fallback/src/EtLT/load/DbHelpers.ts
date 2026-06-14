@@ -56,7 +56,7 @@ export function resolve(
 /** Strip commas/whitespace → integer (VND has no decimals). */
 export function parseAmount(value: any): number {
   if (value == null || String(value).trim() === "") return 0;
-  const cleaned = String(value).replace(/,/g, "").replace(/\./g, "").trim();
-  const num = parseInt(cleaned, 10);
-  return isNaN(num) ? 0 : num;
+  const cleaned = String(value).replace(/,/g, "").trim();
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : Math.round(num);
 }

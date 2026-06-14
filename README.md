@@ -122,3 +122,62 @@ personal-finance-pipeline/
 
 - Never commit `.env` or `credentials/` to Git (both are in `.gitignore`)
 - Use GitHub Secrets for CI/CD environment variables
+
+---
+
+## 🔄 Local Database Sync
+
+GitHub Actions runs the ETL pipeline daily and uploads the cleaned data to GCS, but it uses an **ephemeral MySQL container** that is destroyed after the job ends. To keep your local MySQL up to date, use `sync_local.ps1`.
+
+### How it works
+
+```
+22:00 ICT  GitHub Actions ETL runs → uploads processed CSV to GCS
+22:30 ICT  sync_local.ps1 fires    → pulls GCS → inserts only NEW rows into local MySQL
+```
+
+Only genuinely new rows are inserted — re-running the sync when nothing changed results in `inserted=0`.
+
+### Setup (run once as Administrator)
+
+```powershell
+cd personal-finance-pipeline
+powershell -ExecutionPolicy Bypass -File .\sync_local.ps1 -Register
+```
+
+### Run sync manually (anytime)
+
+```powershell
+# Via Task Scheduler
+Start-ScheduledTask -TaskName "FinancePipeline-LocalSync"
+
+# Or directly
+powershell -ExecutionPolicy Bypass -File .\sync_local.ps1
+```
+
+### Check sync logs
+
+```powershell
+Get-Content .\logs\sync_local.log -Tail 30
+```
+
+### Check scheduled task status
+
+```powershell
+Get-ScheduledTaskInfo -TaskName "FinancePipeline-LocalSync"
+```
+
+### Disable (pause without removing)
+
+```powershell
+Disable-ScheduledTask -TaskName "FinancePipeline-LocalSync"
+
+# Re-enable later
+Enable-ScheduledTask -TaskName "FinancePipeline-LocalSync"
+```
+
+### Remove permanently
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\sync_local.ps1 -Unregister
+```

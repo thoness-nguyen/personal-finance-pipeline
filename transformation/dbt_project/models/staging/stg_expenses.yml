@@ -9,7 +9,7 @@ version: 2
 
 models:
   - name: stg_expenses
-    description: "Cleaned and standardised expenses staging model"
+    description: "Cleaned expense and credit_purchase rows enriched with account, category, and subcategory names"
     columns:
       - name: id
         description: "transaction_id from the transactions table"
@@ -17,32 +17,42 @@ models:
           - not_null
           - unique
       - name: expense_date
-        description: "Date the expense occurred"
+        description: "Date the expense occurred (DATE)"
         tests:
           - not_null
+      - name: yr
+        description: "Year of expense_date"
+      - name: mo
+        description: "Month of expense_date"
       - name: amount
-        description: "Expense amount in VND"
+        description: "Expense amount in VND (always positive)"
         tests:
           - not_null
+      - name: account_name
+        description: "Bank account or credit card name"
+      - name: account_type
+        description: "savings | expense | credit"
       - name: currency
-        description: "ISO currency code from the account (e.g. VND)"
-      - name: description
-        description: "Free-text note on the transaction"
+        description: "ISO currency code (e.g. VND)"
+      - name: transaction_type
+        description: "expense or credit_purchase"
+      - name: spending_type
+        description: "fixed = planned monthly budget, extra = unplanned"
       - name: category_id
-        description: "Foreign key to the categories table"
+        description: "Foreign key to categories"
         tests:
           - not_null
       - name: category_name
-        description: "Category name joined from categories"
+        description: "Category name (e.g. Food & Drinks)"
       - name: subcategory_id
-        description: "Foreign key to the subcategories table"
+        description: "Foreign key to subcategories"
       - name: subcategory_name
-        description: "Subcategory name joined from subcategories"
+        description: "Subcategory name (e.g. Daily meals)"
       - name: payment_method
-        description: "Payment method used (cash, bank_transfer, credit_card, momo)"
-      - name: spending_type
-        description: "fixed = planned budget, extra = unplanned"
+        description: "cash | bank_transfer | credit_card | momo"
+      - name: description
+        description: "Free-text note on the transaction"
       - name: is_regretted
-        description: "True if the spend was marked as wasteful/impulse"
+        description: "1 if the spend was marked as wasteful/impulse"
       - name: source
-        description: "Ingestion service that created this record (nodejs or python)"
+        description: "Ingestion service: nodejs or python"
