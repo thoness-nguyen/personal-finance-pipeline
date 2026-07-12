@@ -12,8 +12,13 @@ finance_pipeline:
   outputs:
     dev:
       type: mysql
+      # When running dbt locally (outside Docker) MYSQL_HOST must be 127.0.0.1
+      # / localhost and MYSQL_PORT must be the HOST-mapped port from
+      # docker-compose.yml (default 3307), NOT the container-internal port
+      # 3306. Using 3306 here will silently connect to a different local
+      # MySQL server (if one exists) and show no data.
       server: "{{ env_var('MYSQL_HOST') }}"
-      port: 3306
+      port: "{{ env_var('MYSQL_PORT', '3307') | as_number }}"
       database: "{{ env_var('MYSQL_DATABASE') }}"
       username: "{{ env_var('MYSQL_USER') }}"
       password: "{{ env_var('MYSQL_PASSWORD') }}"
