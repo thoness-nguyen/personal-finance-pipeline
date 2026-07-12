@@ -21,6 +21,8 @@ yarn-error.log
 # Environment
 .env
 *.env.local
+.streamlit/secrets.toml
+**/.streamlit/secrets.toml
 
 # Data files (never commit raw data)
 *.csv

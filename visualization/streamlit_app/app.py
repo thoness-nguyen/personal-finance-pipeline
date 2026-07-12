@@ -1,14 +1,15 @@
 # =============================================================================
 # File: visualization/streamlit_app/app.py
 # Purpose: Main entry point for the multi-page Streamlit dashboard.
-#          Renders a sidebar navigation menu, displays a health-check status
-#          banner, and provides a landing page with high-level KPI cards.
+#          Renders a sidebar navigation menu and landing page with KPI cards.
 # =============================================================================
+
+from datetime import date
 
 import streamlit as st
 
-# TODO: from utils.db_connector import get_engine
-# TODO: import pandas as pd
+from utils.auth import require_login
+from utils.db_connector import query_df
 
 st.set_page_config(
     page_title="Personal Finance Dashboard",
@@ -16,38 +17,89 @@ st.set_page_config(
     layout="wide",
 )
 
-# Sidebar navigation
+require_login()
+
+# ---------------------------------------------------------------------------
+# Sidebar – date range filter stored in session_state for cross-page access
+# ---------------------------------------------------------------------------
 st.sidebar.title("💰 Finance Dashboard")
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Navigation**")
-st.sidebar.markdown("Use the pages below to explore your finances:")
+st.sidebar.markdown("**Date Range**")
 
-# TODO: Add sidebar links or use st.Page() navigation (Streamlit 1.28+)
+today = date.today()
+default_start = date(today.year - 1, today.month, 1)
 
-st.title("Personal Finance Pipeline – Dashboard")
-st.markdown("Welcome to your personal finance dashboard.")
+date_start = st.sidebar.date_input("From", value=default_start, key="date_start")
+date_end = st.sidebar.date_input("To", value=today, key="date_end")
 
-# TODO: Display a health-check status badge by querying the API /health endpoint.
+st.sidebar.markdown("---")
+st.sidebar.caption("Use the pages in the sidebar to explore your finances.")
+
+
+# ---------------------------------------------------------------------------
+# KPI data loaders
+# ---------------------------------------------------------------------------
+@st.cache_data(ttl=300)
+def load_latest_month_kpis():
+    return query_df(
+        """
+        SELECT yr, mo, total_spend, transaction_count
+        FROM mart_monthly_summary
+        ORDER BY yr DESC, mo DESC
+        LIMIT 1
+        """
+    )
+
+
+@st.cache_data(ttl=300)
+def load_top_category():
+    return query_df(
+        """
+        SELECT category_name, total_spend
+        FROM mart_category_breakdown
+        ORDER BY yr DESC, mo DESC, total_spend DESC
+        LIMIT 1
+        """
+    )
+
+
+@st.cache_data(ttl=300)
+def load_latest_ingestion_date():
+    return query_df("SELECT MAX(last_seen) AS latest FROM mart_top_merchants")
+
+
+# ---------------------------------------------------------------------------
+# Landing page
+# ---------------------------------------------------------------------------
+st.title("Personal Finance Dashboard")
+st.markdown("Overview of your latest financial data. Use the sidebar to explore details.")
 
 st.subheader("📊 Key Performance Indicators")
 
-col1, col2, col3, col4 = st.columns(4)
+try:
+    kpi_df = load_latest_month_kpis()
+    cat_df = load_top_category()
+    date_df = load_latest_ingestion_date()
 
-with col1:
-    st.metric(label="Total Spend (MTD)", value="$0.00")
-    # TODO: Query mart_monthly_summary for current month total spend.
+    total_spend = float(kpi_df["total_spend"].iloc[0]) if not kpi_df.empty else 0.0
+    tx_count = int(kpi_df["transaction_count"].iloc[0]) if not kpi_df.empty else 0
+    top_cat = cat_df["category_name"].iloc[0] if not cat_df.empty else "—"
+    latest = date_df["latest"].iloc[0] if not date_df.empty else "—"
+    if hasattr(latest, "strftime"):
+        latest = latest.strftime("%Y-%m-%d")
 
-with col2:
-    st.metric(label="Transactions (MTD)", value="0")
-    # TODO: Query mart_monthly_summary for current month transaction count.
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Spend (Latest Mo)", f"₫{total_spend:,.0f}")
+    with col2:
+        st.metric("Transactions (Latest Mo)", f"{tx_count:,}")
+    with col3:
+        st.metric("Top Category", top_cat)
+    with col4:
+        st.metric("Latest Ingestion Date", str(latest))
 
-with col3:
-    st.metric(label="Top Category", value="—")
-    # TODO: Query mart_category_breakdown for highest spend category this month.
-
-with col4:
-    st.metric(label="Top Merchant", value="—")
-    # TODO: Query mart_top_merchants for highest spend merchant this month.
+except Exception as exc:
+    st.warning(f"Could not load KPIs — check DB connection: {exc}")
 
 st.markdown("---")
-st.caption("Personal Finance Pipeline • Phase 1–4 scaffold")
+st.caption("Personal Finance Pipeline • Phase 4 – Visualisation")
